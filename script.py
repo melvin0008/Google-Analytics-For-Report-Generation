@@ -2,7 +2,11 @@ import googleanalytics as ga
 import json
 from docx import Document
 from docx.shared import Inches
-
+import Tkinter
+import ttkcalendar
+import datetime
+import tkSimpleDialog
+import tkMessageBox
 
 
 class GoogleAnalyticsReport:
@@ -184,5 +188,66 @@ class GoogleAnalyticsReport:
         self.document.save('demo.docx')
 
 
-report = GoogleAnalyticsReport('2016-04-01','2016-04-15','Monthly Report for XYZ')
-report.buildDoc()
+class CalendarDialog(tkSimpleDialog.Dialog):
+    """Dialog box that displays a calendar and returns the selected date"""
+    def body(self, master):
+        self.calendar = ttkcalendar.Calendar(master)
+        self.calendar.pack()
+
+    def apply(self):
+        self.result = self.calendar.selection
+
+def center(toplevel):
+    toplevel.update_idletasks()
+    w = toplevel.winfo_screenwidth()
+    h = toplevel.winfo_screenheight()
+    size = tuple(int(_) for _ in toplevel.geometry().split('+')[0].split('x'))
+    x = w/2 - size[0]/2
+    y = h/2 - size[1]/2
+    size = (250,250)
+    toplevel.geometry("%dx%d+%d+%d" % (size + (x, y)))
+
+# Demo code:
+def main():
+    root = Tkinter.Tk()
+    root.wm_title("UB Google analytics")
+    root['bg']="#D3D8E8"
+    center(root)
+    dates={}
+
+    def getStartDate():
+        cd = CalendarDialog(root)
+        startDateButton['text'] = cd.result.strftime("%A %d. %B %Y")
+        dates['start'] = cd.result.strftime("%Y-%m-%d")
+
+    def getEndDate():
+        cd = CalendarDialog(root) 
+        endDateButton['text'] = cd.result.strftime("%A %d. %B %Y")
+        dates['end'] = cd.result.strftime("%Y-%m-%d")
+    
+    def buildDocument():
+        if(startDateButton['text']!='Select Start Date!' and endDateButton['text'] != 'Select End Date!'):
+            try:
+                report = GoogleAnalyticsReport(dates['start'],dates['end'],'Monthly Report for XYZ')
+                report.buildDoc()
+                tkMessageBox.showinfo(title='Report Completed',message='Report Completed. Please rename your file')
+            except Exception:
+                 tkMessageBox.showerror(title='Not Available',message='Internet Connection needs to be checked. Also check your dates')
+        else:
+            tkMessageBox.showerror(title='Not Available',message='Check Your Dates')
+
+    
+    startDateButton = Tkinter.Button(root,height=2,width=20, text="Select Start Date!", command=getStartDate,bg='#3b5998',fg='white')
+    startDateButton.pack(pady=10)
+
+    endDateButton = Tkinter.Button(root,height=2,width=20, text="Select End Date!", command=getEndDate,bg='#3b5998',fg='white')
+    endDateButton.pack(pady=10)
+
+    buildButton = Tkinter.Button(root,height=3,width=20, text="Build the document", command=buildDocument,bg='#3b5998',fg='white')
+    buildButton.pack(pady=10)
+    root.update()
+    root.mainloop()
+
+
+if __name__ == "__main__":
+    main() 

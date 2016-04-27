@@ -11,10 +11,10 @@ import tkMessageBox
 
 class GoogleAnalyticsReport:
     def __init__(self,startDate,endDate,heading):
-        credentials = json.load(open('credentials.json'))
+        credentials = json.load(open('secret/credentials.json'))
         accounts = ga.authenticate(**credentials)
         self.profile = accounts[0].webproperties[0].profile
-        self.document = Document()
+        self.document = Document('secret/default.docx')
         self.document.add_heading(heading, 0)
         self.startDate = startDate
         self.endDate = endDate
@@ -77,7 +77,7 @@ class GoogleAnalyticsReport:
     """
     def getTopTenPages(self):
         self.document.add_heading("Top 10 pages", level=1)
-        query = self.profile.core.query.metrics('ga:pageviews', 'ga:uniquePageviews').dimensions('ga:pagePath').set('start_date', self.startDate).set({'end_date': self.endDate}).sort('ga:pageviews', descending=True).limit(10)
+        query = self.profile.core.query.metrics('ga:pageviews', 'ga:uniquePageviews').dimensions('ga:pathTitle').set('start_date', self.startDate).set({'end_date': self.endDate}).sort('ga:pageviews', descending=True).limit(10)
         corrected_values = self.__get_correct_rows(query)
         self.__print_table(10,4,["No.","Page Path","Pageviews","UniquePageviews"],corrected_values)
 
@@ -157,7 +157,7 @@ class GoogleAnalyticsReport:
     """
     def getTopPagesFromDirectTraffic(self):
         self.document.add_heading("Top Pages Visited as a Result of Direct Traffic", level=1)
-        query = self.profile.core.query.metrics('ga:sessions').dimensions('ga:pagePath').filter(medium='(none)').set('start_date', self.startDate).set({'end_date': self.endDate}).sort('ga:sessions', descending=True).limit(10)
+        query = self.profile.core.query.metrics('ga:sessions').dimensions('ga:pathTitle').filter(medium='(none)').set('start_date', self.startDate).set({'end_date': self.endDate}).sort('ga:sessions', descending=True).limit(10)
         corrected_values = self.__get_correct_rows(query)
         self.__print_table(10,3,["No.","Pages","Sessions"],corrected_values)
 
@@ -182,7 +182,6 @@ class GoogleAnalyticsReport:
         self.getOrganicSources()
         self.getReferralSources()
         self.getNonBuffaloReferrals()
-        self.getTopPagesFromDirectTraffic()
         self.getTopPagesFromDirectTraffic()
         self.getSocialNetwork()
         self.document.save('demo.docx')
@@ -228,7 +227,7 @@ def main():
     def buildDocument():
         if(startDateButton['text']!='Select Start Date!' and endDateButton['text'] != 'Select End Date!'):
             try:
-                report = GoogleAnalyticsReport(dates['start'],dates['end'],'Monthly Report for XYZ')
+                report = GoogleAnalyticsReport(dates['start'],dates['end'],'Monthly Report from '+str(startDateButton['text'])+"to "+endDateButton['text'])
                 report.buildDoc()
                 tkMessageBox.showinfo(title='Report Completed',message='Report Completed. Please rename your file')
             except Exception:

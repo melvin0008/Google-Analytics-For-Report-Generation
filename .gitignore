@@ -1,4 +1,5 @@
 venv
 credentials.json
-demo.docx
+demo*.docx
+secret/*
 *.pyc

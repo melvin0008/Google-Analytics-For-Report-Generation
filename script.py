@@ -10,7 +10,7 @@ import tkMessageBox
 
 
 class GoogleAnalyticsReport:
-    def __init__(self,startDate,endDate,heading):
+    def __init__(self,startDate,endDate,heading,query = ""):
         credentials = json.load(open('secret/credentials.json'))
         accounts = ga.authenticate(**credentials)
         self.profile = accounts[0].webproperties[0].profile
@@ -19,6 +19,7 @@ class GoogleAnalyticsReport:
         self.startDate = startDate
         self.endDate = endDate
         self.sessions = 0
+        self.query_path = query
 
 
     """
@@ -26,7 +27,12 @@ class GoogleAnalyticsReport:
     """
     def getBasicMetrics(self):
         self.document.add_heading('Basic Metrics', level=1)
-        query = self.profile.core.query.set(metrics=['ga:users','ga:sessions','ga:pageviews','ga:uniquePageviews','ga:pageviewsPerSession','ga:bounceRate','ga:percentNewSessions']).set('start_date', self.startDate).set({'end_date': self.endDate})
+        query = ""
+        if(self.query_path!=""):
+            query = self.profile.core.query.set(metrics=['ga:users','ga:sessions','ga:pageviews','ga:uniquePageviews','ga:pageviewsPerSession','ga:bounceRate','ga:percentNewSessions']).set('start_date', self.startDate).set({'end_date': self.endDate}).filter(pagepathlevel1=self.query_path)
+        else:
+            query = self.profile.core.query.set(metrics=['ga:users','ga:sessions','ga:pageviews','ga:uniquePageviews','ga:pageviewsPerSession','ga:bounceRate','ga:percentNewSessions']).set('start_date', self.startDate).set({'end_date': self.endDate})
+
         rows = query.get().rows[0]
         users = rows[0]
         self.sessions = rows[1]
@@ -76,8 +82,13 @@ class GoogleAnalyticsReport:
     Top 10 pages
     """
     def getTopTenPages(self):
-        self.document.add_heading("Top 10 pages", level=1)
-        query = self.profile.core.query.metrics('ga:pageviews', 'ga:uniquePageviews').dimensions('ga:pathTitle').set('start_date', self.startDate).set({'end_date': self.endDate}).sort('ga:pageviews', descending=True).limit(10)
+        
+        if(self.query_path!=""):
+            self.document.add_heading("Top 10 pages within the given path", level=1)
+            query = self.profile.core.query.metrics('ga:pageviews', 'ga:uniquePageviews').dimensions('ga:pageTitle').set('start_date', self.startDate).set({'end_date': self.endDate}).sort('ga:pageviews', descending=True).filter(pagepathlevel1__contains=self.query_path).limit(10)
+        else:
+            self.document.add_heading("Top 10 pages", level=1)
+            query = self.profile.core.query.metrics('ga:pageviews', 'ga:uniquePageviews').dimensions('ga:pageTitle').set('start_date', self.startDate).set({'end_date': self.endDate}).sort('ga:pageviews', descending=True).limit(10)
         corrected_values = self.__get_correct_rows(query)
         self.__print_table(10,4,["No.","Page Path","Pageviews","UniquePageviews"],corrected_values)
 
@@ -86,7 +97,10 @@ class GoogleAnalyticsReport:
     """
     def getTechUsedViewWebsite(self):    
         self.document.add_heading("Technology used to view the website", level=1)
-        query = self.profile.core.query.metrics('ga:sessions').dimensions('ga:deviceCategory').set('start_date', self.startDate).set({'end_date': self.endDate}).sort('ga:sessions', descending=True).limit(10)
+        if(self.query_path!=""):
+            query = self.profile.core.query.metrics('ga:sessions').dimensions('ga:deviceCategory').set('start_date', self.startDate).set({'end_date': self.endDate}).sort('ga:sessions', descending=True).filter(pagepathlevel1=self.query_path).limit(10)
+        else:
+            query = self.profile.core.query.metrics('ga:sessions').dimensions('ga:deviceCategory').set('start_date', self.startDate).set({'end_date': self.endDate}).sort('ga:sessions', descending=True).limit(10)
         corrected_values = self.__get_correct_rows(query)
         self.__print_table(3,3,["No.","Device","Session"],corrected_values)
 
@@ -95,7 +109,10 @@ class GoogleAnalyticsReport:
     Audience
     """
     def getAudience(self):
-        query = self.profile.core.query.metrics('ga:sessions').dimensions('ga:country').set('start_date', self.startDate).set({'end_date': self.endDate}).sort('ga:sessions', descending=True)
+        if(self.query_path!=""):
+            query = self.profile.core.query.metrics('ga:sessions').dimensions('ga:country').set('start_date', self.startDate).set({'end_date': self.endDate}).sort('ga:sessions', descending=True).filter(pagepathlevel1=self.query_path)
+        else:
+            query = self.profile.core.query.metrics('ga:sessions').dimensions('ga:country').set('start_date', self.startDate).set({'end_date': self.endDate}).sort('ga:sessions', descending=True)
         rows = query.get().rows
         numberOfCountries = len(rows)
         self.document.add_heading("Audience", level=1)
@@ -111,7 +128,11 @@ class GoogleAnalyticsReport:
     """
     def getTrafficSources(self):
         self.document.add_heading("Traffic Sources", level=1)
-        query = self.profile.core.query.metrics('ga:sessions').dimensions('ga:medium').set('start_date', self.startDate).set({'end_date': self.endDate}).sort('ga:sessions', descending=True).limit(10)
+        if(self.query_path!=""):
+            query = self.profile.core.query.metrics('ga:sessions').dimensions('ga:medium').set('start_date', self.startDate).set({'end_date': self.endDate}).sort('ga:sessions', descending=True).filter(pagepathlevel1=self.query_path).limit(10)
+        else:
+            query = self.profile.core.query.metrics('ga:sessions').dimensions('ga:medium').set('start_date', self.startDate).set({'end_date': self.endDate}).sort('ga:sessions', descending=True).limit(10)
+
         corrected_values = self.__get_correct_rows(query)
         self.__print_table(10,3,["No.","Source","Sessions"],corrected_values)
 
@@ -120,7 +141,10 @@ class GoogleAnalyticsReport:
     """
     def getSearchTerms(self):
         self.document.add_heading("Search Terms", level=1)
-        query = self.profile.core.query.metrics('ga:sessions').dimensions('ga:keyword').set('start_date', self.startDate).set({'end_date': self.endDate}).sort('ga:sessions', descending=True).limit(10)
+        if(self.query_path!=""):
+            query = self.profile.core.query.metrics('ga:sessions').dimensions('ga:keyword').set('start_date', self.startDate).set({'end_date': self.endDate}).sort('ga:sessions', descending=True).filter(pagepathlevel1=self.query_path).limit(10)
+        else:
+            query = self.profile.core.query.metrics('ga:sessions').dimensions('ga:keyword').set('start_date', self.startDate).set({'end_date': self.endDate}).sort('ga:sessions', descending=True).limit(10)
         corrected_values = self.__get_correct_rows(query)
         self.__print_table(10,3,["No.","Search Term","Sessions"],corrected_values)
 
@@ -130,7 +154,10 @@ class GoogleAnalyticsReport:
     """
     def getOrganicSources(self):
         self.document.add_heading("Organic Sources", level=1)
-        query = self.profile.core.query.metrics('ga:sessions').dimensions('ga:source').filter(medium='organic').set('start_date', self.startDate).set({'end_date': self.endDate}).limit(10).sort('ga:sessions', descending=True)
+        if(self.query_path!=""):
+            query = self.profile.core.query.metrics('ga:sessions').dimensions('ga:source').filter(medium='organic').set('start_date', self.startDate).set({'end_date': self.endDate}).filter(pagepathlevel1=self.query_path).limit(10).sort('ga:sessions', descending=True)
+        else:
+            query = self.profile.core.query.metrics('ga:sessions').dimensions('ga:source').filter(medium='organic').set('start_date', self.startDate).set({'end_date': self.endDate}).limit(10).sort('ga:sessions', descending=True)
         corrected_values = self.__get_correct_rows(query)
         self.__print_table(10,3,["No.","Organic Sources","Sessions"],corrected_values)
 
@@ -139,7 +166,10 @@ class GoogleAnalyticsReport:
     """
     def getReferralSources(self):
         self.document.add_heading("Referral Sources", level=1)
-        query = self.profile.core.query.metrics('ga:sessions').dimensions('ga:source').filter(medium='referral').set('start_date', self.startDate).set({'end_date': self.endDate}).limit(10).sort('ga:sessions', descending=True)
+        if(self.query_path!=""):
+            query = self.profile.core.query.metrics('ga:sessions').dimensions('ga:source').filter(medium='referral').set('start_date', self.startDate).set({'end_date': self.endDate}).filter(pagepathlevel1=self.query_path).limit(10).sort('ga:sessions', descending=True)
+        else:
+            query = self.profile.core.query.metrics('ga:sessions').dimensions('ga:source').filter(medium='referral').set('start_date', self.startDate).set({'end_date': self.endDate}).limit(10).sort('ga:sessions', descending=True)
         corrected_values = self.__get_correct_rows(query)
         self.__print_table(10,3,["No.","Referral Source","Sessions"],corrected_values)
 
@@ -148,7 +178,10 @@ class GoogleAnalyticsReport:
     """
     def getNonBuffaloReferrals(self):
         self.document.add_heading("Non Buffalo Referral Sources", level=1)
-        query = self.profile.core.query.metrics('ga:sessions').dimensions('ga:source').filter(medium='referral').filter(source__ncontains="buffalo").set('start_date', self.startDate).set({'end_date': self.endDate}).limit(10).sort('ga:sessions', descending=True)
+        if(self.query_path!=""):
+            query = self.profile.core.query.metrics('ga:sessions').dimensions('ga:source').filter(medium='referral').filter(source__ncontains="buffalo").set('start_date', self.startDate).set({'end_date': self.endDate}).filter(pagepathlevel1=self.query_path).limit(10).sort('ga:sessions', descending=True)
+        else:
+            query = self.profile.core.query.metrics('ga:sessions').dimensions('ga:source').filter(medium='referral').filter(source__ncontains="buffalo").set('start_date', self.startDate).set({'end_date': self.endDate}).limit(10).sort('ga:sessions', descending=True)
         corrected_values = self.__get_correct_rows(query)
         self.__print_table(10,3,["No.","Source","Sessions"],corrected_values)
 
@@ -156,8 +189,13 @@ class GoogleAnalyticsReport:
     Top Pages Visited as a Result of Direct Traffic
     """
     def getTopPagesFromDirectTraffic(self):
-        self.document.add_heading("Top Pages Visited as a Result of Direct Traffic", level=1)
-        query = self.profile.core.query.metrics('ga:sessions').dimensions('ga:pathTitle').filter(medium='(none)').set('start_date', self.startDate).set({'end_date': self.endDate}).sort('ga:sessions', descending=True).limit(10)
+       
+        if(self.query_path!=""):
+            self.document.add_heading("Top Pages Visited as a Result of Direct Traffic (within the given path)", level=1)
+            query = self.profile.core.query.metrics('ga:sessions').dimensions('ga:pageTitle').filter(medium='(none)').set('start_date', self.startDate).set({'end_date': self.endDate}).sort('ga:sessions', descending=True).filter(pagepathlevel1__contains=self.query_path).limit(10)
+        else:
+            self.document.add_heading("Top Pages Visited as a Result of Direct Traffic", level=1)
+            query = self.profile.core.query.metrics('ga:sessions').dimensions('ga:pageTitle').filter(medium='(none)').set('start_date', self.startDate).set({'end_date': self.endDate}).sort('ga:sessions', descending=True).limit(10)
         corrected_values = self.__get_correct_rows(query)
         self.__print_table(10,3,["No.","Pages","Sessions"],corrected_values)
 
@@ -167,7 +205,10 @@ class GoogleAnalyticsReport:
     """
     def getSocialNetwork(self):
         self.document.add_heading("Social Network", level=1)
-        query = self.profile.core.query.metrics('ga:sessions').dimensions('ga:socialNetwork').set('start_date', self.startDate).set({'end_date': self.endDate}).sort('ga:sessions', descending=True).limit(10)
+        if(self.query_path!=""):
+            query = self.profile.core.query.metrics('ga:sessions').dimensions('ga:socialNetwork').set('start_date', self.startDate).set({'end_date': self.endDate}).sort('ga:sessions', descending=True).filter(pagepathlevel1=self.query_path).limit(10)
+        else:
+            query = self.profile.core.query.metrics('ga:sessions').dimensions('ga:socialNetwork').set('start_date', self.startDate).set({'end_date': self.endDate}).sort('ga:sessions', descending=True).limit(10)      
         corrected_values = self.__get_correct_rows(query)
         self.__print_table(10,3,["No.","Social Networks","Sessions"],corrected_values)
 
@@ -226,12 +267,13 @@ def main():
     
     def buildDocument():
         if(startDateButton['text']!='Select Start Date!' and endDateButton['text'] != 'Select End Date!'):
-            try:
-                report = GoogleAnalyticsReport(dates['start'],dates['end'],'Monthly Report from '+str(startDateButton['text'])+"to "+endDateButton['text'])
-                report.buildDoc()
-                tkMessageBox.showinfo(title='Report Completed',message='Report Completed. Please rename your file')
-            except Exception:
-                 tkMessageBox.showerror(title='Not Available',message='Internet Connection needs to be checked. Also check your dates')
+            # try:
+            report = GoogleAnalyticsReport(dates['start'],dates['end'],'Monthly Resulteport from '+str(startDateButton['text'])+"to "+endDateButton['text'],page_path.get())
+            # print page_path.get()
+            report.buildDoc()
+            tkMessageBox.showinfo(title='Report Completed',message='Report Completed. Please rename your file')
+            # except Exception:
+            #      tkMessageBox.showerror(title='Not Available',message='Internet Connection needs to be checked. Also check your dates')
         else:
             tkMessageBox.showerror(title='Not Available',message='Check Your Dates')
 
@@ -241,6 +283,10 @@ def main():
 
     endDateButton = Tkinter.Button(root,height=2,width=20, text="Select End Date!", command=getEndDate,bg='#3b5998',fg='white')
     endDateButton.pack(pady=10)
+
+    label2 = Tkinter.Label( root, text="Page path")
+    page_path = Tkinter.Entry(root)
+    page_path.pack(pady=10)
 
     buildButton = Tkinter.Button(root,height=3,width=20, text="Build the document", command=buildDocument,bg='#3b5998',fg='white')
     buildButton.pack(pady=10)
